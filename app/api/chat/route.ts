@@ -1,11 +1,15 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { generateText } from "ai"
+import type { NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { getSarvamClient } from "@/lib/sarvam/client"
+import { getSarvamLanguageCode } from "@/lib/sarvam/utils"
+
+export const maxDuration = 30
 
 async function getUserProfile(userId: string) {
   try {
     const supabase = await createClient()
     const { data: profile } = await supabase.from("user_profiles").select("*").eq("id", userId).single()
-
     return profile
   } catch (error) {
     console.error("Error fetching user profile:", error)
@@ -27,8 +31,8 @@ async function saveToHistory(userId: string, message: string, response: string, 
   }
 }
 
-function buildContextualPrompt(message: string, context: string, userProfile: any, history: any[]) {
-  let systemPrompt = `You are a professional AI Financial Advisor powered by Google Gemini. You provide helpful, accurate, and personalized financial guidance.
+function buildSystemPrompt(context: string, userProfile: any, language = "en-IN") {
+  let systemPrompt = `You are a professional AI Financial Advisor. You provide helpful, accurate, and personalized financial guidance.
 
 IMPORTANT GUIDELINES:
 - Always provide educational, informative responses
@@ -36,7 +40,18 @@ IMPORTANT GUIDELINES:
 - Always suggest consulting with qualified financial professionals for major decisions
 - Use Indian financial context (INR, Indian financial products, regulations)
 - Be conversational but professional
-- Keep responses concise but comprehensive
+- Keep responses concise but comprehensive`
+
+  if (language !== "en-IN") {
+    systemPrompt += `
+- The user is communicating in ${language}
+- You should respond in the same language as the user's query
+- If the user writes in English, respond in English
+- If the user writes in an Indian language, respond in that language
+- Maintain financial terminology accuracy across languages`
+  }
+
+  systemPrompt += `
 
 CONTEXT: You are currently in the ${context} advisory portal.`
 
@@ -69,148 +84,39 @@ Please personalize your advice based on this profile when relevant.`
 
   systemPrompt += `\n\nSPECIALIZATION: ${contextGuidance[context as keyof typeof contextGuidance] || contextGuidance.general}`
 
-  // Add conversation history context
-  if (history && history.length > 0) {
-    systemPrompt += `\n\nRECENT CONVERSATION CONTEXT:\n`
-    history.slice(-3).forEach((msg: any, index: number) => {
-      systemPrompt += `${msg.role === "user" ? "User" : "Assistant"}: ${msg.content}\n`
-    })
-  }
-
-  systemPrompt += `\n\nUser's current question: ${message}`
-
   return systemPrompt
 }
 
-async function callDeepSeekAPI(prompt: string) {
-  try {
-    const DEEPSEEK_API_KEY =
-      process.env.DEEPSEEK_API_KEY || "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"
-    const DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
+async function translateResponse(text: string, targetLanguage: string): Promise<string> {
+  if (targetLanguage === "en-IN") {
+    return text
+  }
 
-    const response = await fetch(DEEPSEEK_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "deepseek-reasoner",
-        messages: [
-          {
-            role: "system",
-            content: "You are a professional financial advisor. Provide helpful, accurate financial guidance.",
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 1024,
-      }),
+  try {
+    const sarvamClient = getSarvamClient()
+    const sourceCode = getSarvamLanguageCode("en-IN")
+    const targetCode = getSarvamLanguageCode(targetLanguage)
+
+    const translated = await sarvamClient.translate({
+      input: text,
+      source_language_code: sourceCode,
+      target_language_code: targetCode,
+      mode: "formal",
     })
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      if (response.status === 401) {
-        return null // Invalid API key, fall back to Gemini only
-      }
-      throw new Error(`DeepSeek API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data.choices?.[0]?.message?.content || "No response from DeepSeek"
+    return translated
   } catch (error) {
-    return null
+    console.error("Translation error in chat:", error)
+    return text // Return original text on error
   }
-}
-
-async function callGeminiAPI(prompt: string) {
-  try {
-    const GEMINI_API_KEY = "AIzaSyAQQR9QuaypbfPmhwFM5NNGMMd_BDcnKxQ"
-    const GEMINI_API_URL =
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
-
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt,
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 1024,
-        },
-        safetySettings: [
-          {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE",
-          },
-          {
-            category: "HARM_CATEGORY_HATE_SPEECH",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE",
-          },
-          {
-            category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE",
-          },
-          {
-            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE",
-          },
-        ],
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini"
-  } catch (error) {
-    console.error("[v0] Gemini API error:", error)
-    return "Gemini API unavailable"
-  }
-}
-
-function combineResponses(geminiResponse: string, deepseekResponse: string | null) {
-  if (geminiResponse === "Gemini API unavailable" && !deepseekResponse) {
-    return "I apologize, but AI services are currently unavailable. Please try again later."
-  }
-
-  if (geminiResponse === "Gemini API unavailable") {
-    return `**DeepSeek R1 Analysis:**\n\n${deepseekResponse}`
-  }
-
-  if (!deepseekResponse) {
-    return `**Google Gemini Analysis:**\n\n${geminiResponse}`
-  }
-
-  return `**Combined AI Analysis:**\n\n**Google Gemini Perspective:**\n${geminiResponse}\n\n**DeepSeek R1 Perspective:**\n${deepseekResponse}\n\n*This response combines insights from both Google Gemini and DeepSeek R1 for comprehensive financial guidance.*`
 }
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("[v0] Chat API called")
+    const { messages, language = "en-IN", context = "general" } = await request.json()
 
-    const { message, context, history } = await request.json()
-    console.log("[v0] Received message:", message, "context:", context)
-
-    if (!message || typeof message !== "string") {
-      return NextResponse.json({ error: "Message is required" }, { status: 400 })
+    if (!messages || !Array.isArray(messages)) {
+      return new Response("Messages array is required", { status: 400 })
     }
 
     const supabase = await createClient()
@@ -218,42 +124,71 @@ export async function POST(request: NextRequest) {
       data: { user },
     } = await supabase.auth.getUser()
 
-    console.log("[v0] User authenticated:", !!user)
-
     let userProfile = null
     if (user) {
       userProfile = await getUserProfile(user.id)
-      console.log("[v0] User profile loaded:", !!userProfile)
     }
 
-    const prompt = buildContextualPrompt(message, context || "general", userProfile, history)
-    console.log("[v0] Calling both AI APIs...")
+    const systemPrompt = buildSystemPrompt(context, userProfile, language)
 
-    const [geminiResponse, deepseekResponse] = await Promise.all([callGeminiAPI(prompt), callDeepSeekAPI(prompt)])
+    const result = await generateText({
+      model: "google/gemini-1.5-flash-latest",
+      system: systemPrompt,
+      messages: messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      })),
+      temperature: 0.7,
+      maxTokens: 1024,
+    })
 
-    console.log("[v0] Both AI responses received")
+    let responseText = result.text
 
-    const combinedResponse = combineResponses(geminiResponse, deepseekResponse)
-
-    if (user) {
-      await saveToHistory(user.id, message, combinedResponse, context || "general")
+    // Translate response if needed
+    if (language !== "en-IN") {
+      responseText = await translateResponse(responseText, language)
     }
 
-    return NextResponse.json({
-      response: combinedResponse,
-      context: context || "general",
-      timestamp: new Date().toISOString(),
+    // Save to history
+    if (user && messages.length > 0) {
+      const lastUserMessage = messages[messages.length - 1]
+      if (lastUserMessage.role === "user") {
+        await saveToHistory(user.id, lastUserMessage.content, responseText, context)
+      }
+    }
+
+    // Create a streaming response manually
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      start(controller) {
+        // Send the response in chunks to simulate streaming
+        const words = responseText.split(" ")
+        let index = 0
+
+        const sendChunk = () => {
+          if (index < words.length) {
+            const chunk = words[index] + (index < words.length - 1 ? " " : "")
+            const data = JSON.stringify({ type: "text-delta", textDelta: chunk })
+            controller.enqueue(encoder.encode(`0:${data}\n`))
+            index++
+            setTimeout(sendChunk, 50) // Delay between words for streaming effect
+          } else {
+            controller.close()
+          }
+        }
+
+        sendChunk()
+      },
+    })
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Transfer-Encoding": "chunked",
+      },
     })
   } catch (error) {
-    console.error("[v0] Chat API error:", error)
-
-    const fallbackResponse =
-      "I apologize, but I'm experiencing technical difficulties. Please try again in a moment, or consider consulting with a qualified financial advisor for immediate assistance."
-
-    return NextResponse.json({
-      response: fallbackResponse,
-      context: "general",
-      timestamp: new Date().toISOString(),
-    })
+    console.error("Chat API error:", error)
+    return new Response("Internal server error", { status: 500 })
   }
 }

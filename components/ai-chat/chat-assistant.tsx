@@ -2,20 +2,23 @@
 
 import type React from "react"
 
-import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { MessageCircle, Send, Bot, User, Minimize2 } from "lucide-react"
+import { MessageCircle, Send, Bot, User, Minimize2, Globe } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { useLanguage } from "@/contexts/language-context"
+import { TTSButton } from "@/components/ui/tts-button"
+import { LanguageSelector } from "@/components/ui/language-selector"
 
 interface Message {
   id: string
   role: "user" | "assistant"
   content: string
-  timestamp: Date
+  createdAt: Date
 }
 
 interface ChatAssistantProps {
@@ -26,13 +29,14 @@ interface ChatAssistantProps {
 }
 
 export function ChatAssistant({ context, className = "", isOpen, onOpenChange }: ChatAssistantProps) {
+  const [internalMinimized, setInternalMinimized] = useState(true)
+  const [user, setUser] = useState<any>(null)
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [internalMinimized, setInternalMinimized] = useState(true)
-  const [user, setUser] = useState<any>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const { currentLanguage, translate } = useLanguage()
 
   const isMinimized = isOpen !== undefined ? !isOpen : internalMinimized
   const setIsMinimized = onOpenChange ? (minimized: boolean) => onOpenChange(!minimized) : setInternalMinimized
@@ -47,14 +51,21 @@ export function ChatAssistant({ context, className = "", isOpen, onOpenChange }:
     }
     checkUser()
 
-    const welcomeMessage: Message = {
-      id: "welcome",
-      role: "assistant",
-      content: getWelcomeMessage(context),
-      timestamp: new Date(),
+    const setWelcomeMessage = async () => {
+      const welcomeText = getWelcomeMessage(context)
+      const translatedWelcome = currentLanguage !== "en-IN" ? await translate(welcomeText) : welcomeText
+
+      const welcomeMessage: Message = {
+        id: "welcome",
+        role: "assistant",
+        content: translatedWelcome,
+        createdAt: new Date(),
+      }
+      setMessages([welcomeMessage])
     }
-    setMessages([welcomeMessage])
-  }, [context])
+
+    setWelcomeMessage()
+  }, [context, currentLanguage, translate])
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -65,100 +76,112 @@ export function ChatAssistant({ context, className = "", isOpen, onOpenChange }:
   const getWelcomeMessage = (context: string) => {
     const messages = {
       financial:
-        "Hello! I'm your AI Financial Advisor powered by Google Gemini & DeepSeek R1. I can help you with budgeting, savings strategies, retirement planning, and general financial guidance. What would you like to discuss?",
-      loan: "Hi! I'm here to assist you with loan-related queries using advanced AI from Google Gemini & DeepSeek R1. I can help you understand different loan types, EMI calculations, eligibility criteria, and debt management strategies. How can I help?",
+        "Hello! I'm your AI Financial Advisor powered by Google Gemini & Sarvam AI. I can help you with budgeting, savings strategies, retirement planning, and general financial guidance. What would you like to discuss?",
+      loan: "Hi! I'm here to assist you with loan-related queries using advanced AI from Google Gemini & Sarvam AI. I can help you understand different loan types, EMI calculations, eligibility criteria, and debt management strategies. How can I help?",
       investment:
-        "Welcome! I'm your AI Investment Advisor powered by Google Gemini & DeepSeek R1. I can guide you through investment options, portfolio planning, risk assessment, and market insights. What investment topic interests you?",
+        "Welcome! I'm your AI Investment Advisor powered by Google Gemini & Sarvam AI. I can guide you through investment options, portfolio planning, risk assessment, and market insights. What investment topic interests you?",
       insurance:
-        "Hello! I'm your AI Insurance Advisor using Google Gemini & DeepSeek R1. I can help you understand insurance types, coverage needs, premium calculations, and claim processes. What insurance question do you have?",
+        "Hello! I'm your AI Insurance Advisor using Google Gemini & Sarvam AI. I can help you understand insurance types, coverage needs, premium calculations, and claim processes. What insurance question do you have?",
       general:
-        "Hi! I'm your Smart Financial Advisor AI powered by Google Gemini & DeepSeek R1. I can assist you with financial planning, loans, investments, and insurance queries. How can I help you today?",
+        "Hi! I'm your Smart Financial Advisor AI powered by Google Gemini & Sarvam AI. I can assist you with financial planning, loans, investments, and insurance queries in multiple Indian languages. How can I help you today?",
     }
     return messages[context] || messages.general
   }
 
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) {
-      console.log("[v0] Message sending blocked - input:", input.trim(), "isLoading:", isLoading)
-      return
-    }
-
-    console.log("[v0] Sending message:", input.trim())
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim() || isLoading) return
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input.trim(),
-      timestamp: new Date(),
+      content: input,
+      createdAt: new Date(),
     }
 
-    setMessages((prev) => {
-      console.log("[v0] Adding user message to state:", userMessage)
-      return [...prev, userMessage]
-    })
-
-    const messageToSend = input.trim()
+    setMessages((prev) => [...prev, userMessage])
     setInput("")
     setIsLoading(true)
 
     try {
-      console.log("[v0] Making API call to /api/chat")
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: messageToSend,
+          messages: [...messages, userMessage].map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+          })),
           context,
-          history: messages.slice(-5),
+          language: currentLanguage,
         }),
       })
-
-      console.log("[v0] API response status:", response.status)
 
       if (!response.ok) {
         throw new Error("Failed to get response")
       }
 
-      const data = await response.json()
-      console.log("[v0] API response data:", data)
+      const reader = response.body?.getReader()
+      if (!reader) {
+        throw new Error("No response body")
+      }
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: data.response,
-        timestamp: new Date(),
+        content: "",
+        createdAt: new Date(),
       }
 
-      console.log("[v0] Adding assistant message to state:", assistantMessage)
       setMessages((prev) => [...prev, assistantMessage])
+
+      const decoder = new TextDecoder()
+      let done = false
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read()
+        done = readerDone
+
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true })
+          const lines = chunk.split("\n")
+
+          for (const line of lines) {
+            if (line.startsWith("0:")) {
+              try {
+                const data = JSON.parse(line.slice(2))
+                if (data.type === "text-delta" && data.textDelta) {
+                  setMessages((prev) =>
+                    prev.map((msg) =>
+                      msg.id === assistantMessage.id ? { ...msg, content: msg.content + data.textDelta } : msg,
+                    ),
+                  )
+                }
+              } catch (e) {
+                // Ignore parsing errors for malformed chunks
+              }
+            }
+          }
+        }
+      }
     } catch (error) {
-      console.error("[v0] Chat error:", error)
+      console.error("Chat error:", error)
       const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: (Date.now() + 2).toString(),
         role: "assistant",
-        content:
-          "I apologize, but I'm having trouble connecting right now. Please try again in a moment. For immediate assistance, consider consulting with a qualified financial advisor.",
-        timestamp: new Date(),
+        content: "I apologize, but I'm having trouble responding right now. Please try again in a moment.",
+        createdAt: new Date(),
       }
       setMessages((prev) => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
-      console.log("[v0] Message sending completed, isLoading set to false")
-      setTimeout(() => {
-        if (inputRef.current) {
-          inputRef.current.focus()
-        }
-      }, 100)
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value)
   }
 
   if (isMinimized) {
@@ -185,13 +208,27 @@ export function ChatAssistant({ context, className = "", isOpen, onOpenChange }:
             </CardTitle>
             <div className="flex items-center space-x-2">
               <Badge variant="secondary" className="text-xs">
-                Gemini + DeepSeek R1
+                Gemini + Sarvam AI
               </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowLanguageSelector(!showLanguageSelector)}
+                className="h-8 w-8 p-0"
+                title="Change Language"
+              >
+                <Globe className="h-4 w-4" />
+              </Button>
               <Button variant="ghost" size="sm" onClick={() => setIsMinimized(true)} className="h-8 w-8 p-0">
                 <Minimize2 className="h-4 w-4" />
               </Button>
             </div>
           </div>
+          {showLanguageSelector && (
+            <div className="mt-2 pt-2 border-t">
+              <LanguageSelector variant="compact" />
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-0 flex flex-col h-[420px]">
           <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
@@ -215,9 +252,27 @@ export function ChatAssistant({ context, className = "", isOpen, onOpenChange }:
                       message.role === "user" ? "bg-accent text-accent-foreground ml-auto" : "bg-muted text-foreground"
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                    <div className="text-xs opacity-70 mt-1">
-                      {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    <div className="flex items-start justify-between">
+                      <p className="whitespace-pre-wrap flex-1">{message.content}</p>
+                      {message.role === "assistant" && message.content && (
+                        <div className="ml-2 flex-shrink-0">
+                          <TTSButton
+                            text={message.content}
+                            language={currentLanguage}
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 p-0"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs opacity-70 mt-1 flex items-center justify-between">
+                      <span>{message.createdAt?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                      {currentLanguage !== "en-IN" && message.role === "assistant" && (
+                        <Badge variant="outline" className="text-xs ml-2">
+                          {currentLanguage.split("-")[0].toUpperCase()}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -246,26 +301,24 @@ export function ChatAssistant({ context, className = "", isOpen, onOpenChange }:
           </ScrollArea>
 
           <div className="p-4 border-t">
-            <div className="flex space-x-2">
+            <form onSubmit={handleSubmit} className="flex space-x-2">
               <Input
-                ref={inputRef}
                 value={input}
-                onChange={(e) => {
-                  console.log("[v0] Input changed:", e.target.value)
-                  setInput(e.target.value)
-                }}
-                onKeyPress={handleKeyPress}
-                placeholder="Ask me about financial planning..."
+                onChange={handleInputChange}
+                placeholder={
+                  currentLanguage === "en-IN" ? "Ask me about financial planning..." : "वित्तीय योजना के बारे में पूछें..."
+                }
                 className="flex-1"
                 disabled={isLoading}
               />
-              <Button onClick={sendMessage} disabled={isLoading || !input.trim()} size="sm">
+              <Button type="submit" disabled={isLoading || !input.trim()} size="sm">
                 <Send className="h-4 w-4" />
               </Button>
-            </div>
+            </form>
             <p className="text-xs text-muted-foreground mt-2 text-center">
-              Powered by Google Gemini & DeepSeek R1. AI responses are for educational purposes only. Consult
-              professionals for personalized advice.
+              Powered by Google Gemini & Sarvam AI. Supports{" "}
+              {currentLanguage !== "en-IN" ? "multiple Indian languages" : "Hindi, Tamil, Telugu & more"}. AI responses
+              are for educational purposes only.
             </p>
           </div>
         </CardContent>

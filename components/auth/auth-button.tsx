@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { TranslationWrapper } from "@/components/ui/translation-wrapper"
 
 export function AuthButton() {
   const [user, setUser] = useState<User | null>(null)
@@ -54,10 +55,14 @@ export function AuthButton() {
     return (
       <div className="flex items-center gap-2">
         <Button variant="ghost" asChild>
-          <a href="/auth/login">Login</a>
+          <a href="/auth/login">
+            <TranslationWrapper>Login</TranslationWrapper>
+          </a>
         </Button>
         <Button asChild>
-          <a href="/auth/sign-up">Sign Up</a>
+          <a href="/auth/sign-up">
+            <TranslationWrapper>Sign Up</TranslationWrapper>
+          </a>
         </Button>
       </div>
     )
@@ -77,13 +82,21 @@ export function AuthButton() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <div className="flex flex-col space-y-1 p-2">
           <p className="text-sm font-medium leading-none">{user.email}</p>
-          <p className="text-xs leading-none text-muted-foreground">Financial Advisor User</p>
+          <p className="text-xs leading-none text-muted-foreground">
+            <TranslationWrapper>Financial Advisor User</TranslationWrapper>
+          </p>
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => router.push("/profile")}>Profile Settings</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push("/dashboard")}>Dashboard</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push("/profile")}>
+          <TranslationWrapper>Profile Settings</TranslationWrapper>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push("/dashboard")}>
+          <TranslationWrapper>Dashboard</TranslationWrapper>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
+        <DropdownMenuItem onClick={handleSignOut}>
+          <TranslationWrapper>Sign Out</TranslationWrapper>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

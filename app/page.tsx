@@ -5,6 +5,8 @@ import { ArrowRight, Shield, TrendingUp, Calculator, Users } from "lucide-react"
 import Link from "next/link"
 import { ChatAssistant } from "@/components/ai-chat/chat-assistant"
 import { AuthButton } from "@/components/auth/auth-button"
+import { LanguageSelector } from "@/components/ui/language-selector"
+import { TranslationWrapper } from "@/components/ui/translation-wrapper"
 
 export default function HomePage() {
   return (
@@ -16,27 +18,30 @@ export default function HomePage() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <TrendingUp className="h-4 w-4" />
             </div>
-            <span className="font-serif text-xl font-bold">Smart Financial Advisor</span>
+            <span className="font-serif text-xl font-bold">
+              <TranslationWrapper>Smart Financial Advisor</TranslationWrapper>
+            </span>
           </div>
           <div className="hidden md:flex items-center space-x-6">
             <Link
               href="#about"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              About
+              <TranslationWrapper>About</TranslationWrapper>
             </Link>
             <Link
               href="#services"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              Services
+              <TranslationWrapper>Services</TranslationWrapper>
             </Link>
             <Link
               href="#features"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              Features
+              <TranslationWrapper>Features</TranslationWrapper>
             </Link>
+            <LanguageSelector variant="compact" />
             <AuthButton />
           </div>
         </div>
@@ -47,24 +52,29 @@ export default function HomePage() {
         <div className="container">
           <div className="mx-auto max-w-4xl text-center">
             <Badge variant="secondary" className="mb-4">
-              AI-Powered Financial Advisory
+              <TranslationWrapper>AI-Powered Financial Advisory</TranslationWrapper>
             </Badge>
             <h1 className="font-serif text-4xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
-              Your Smart Path to <span className="text-accent">Financial Success</span>
+              <TranslationWrapper>Your Smart Path to</TranslationWrapper>{" "}
+              <span className="text-accent">
+                <TranslationWrapper>Financial Success</TranslationWrapper>
+              </span>
             </h1>
             <p className="mt-6 text-lg leading-8 text-muted-foreground max-w-2xl mx-auto">
-              Navigate your financial journey with confidence. Our AI-powered platform provides personalized advice for
-              investments, loans, insurance, and comprehensive financial planning.
+              <TranslationWrapper>
+                Navigate your financial journey with confidence. Our AI-powered platform provides personalized advice
+                for investments, loans, insurance, and comprehensive financial planning.
+              </TranslationWrapper>
             </p>
             <div className="mt-10 flex items-center justify-center gap-4">
               <Button asChild size="lg" className="bg-accent hover:bg-accent/90">
                 <Link href="/features">
-                  Explore Features
+                  <TranslationWrapper>Explore Features</TranslationWrapper>
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button variant="outline" size="lg">
-                Learn More
+                <TranslationWrapper>Learn More</TranslationWrapper>
               </Button>
             </div>
           </div>
@@ -75,11 +85,15 @@ export default function HomePage() {
       <section id="about" className="py-20 bg-muted/50">
         <div className="container">
           <div className="mx-auto max-w-3xl text-center">
-            <h2 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">About Smart Financial Advisor</h2>
+            <h2 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">
+              <TranslationWrapper>About Smart Financial Advisor</TranslationWrapper>
+            </h2>
             <p className="mt-6 text-lg leading-8 text-muted-foreground">
-              We combine cutting-edge AI technology with proven financial expertise to deliver personalized,
-              transparent, and educational financial guidance. Our platform demystifies complex financial decisions and
-              empowers you to make informed choices about your financial future.
+              <TranslationWrapper>
+                We combine cutting-edge AI technology with proven financial expertise to deliver personalized,
+                transparent, and educational financial guidance. Our platform demystifies complex financial decisions
+                and empowers you to make informed choices about your financial future.
+              </TranslationWrapper>
             </p>
           </div>
 
@@ -88,36 +102,52 @@ export default function HomePage() {
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-accent text-accent-foreground">
                 <Shield className="h-6 w-6" />
               </div>
-              <h3 className="mt-4 font-serif text-lg font-semibold">Secure & Trusted</h3>
+              <h3 className="mt-4 font-serif text-lg font-semibold">
+                <TranslationWrapper>Secure & Trusted</TranslationWrapper>
+              </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Bank-level security with transparent, educational guidance you can trust.
+                <TranslationWrapper>
+                  Bank-level security with transparent, educational guidance you can trust.
+                </TranslationWrapper>
               </p>
             </div>
             <div className="text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-accent text-accent-foreground">
                 <TrendingUp className="h-6 w-6" />
               </div>
-              <h3 className="mt-4 font-serif text-lg font-semibold">AI-Powered</h3>
+              <h3 className="mt-4 font-serif text-lg font-semibold">
+                <TranslationWrapper>AI-Powered</TranslationWrapper>
+              </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Advanced algorithms provide personalized recommendations for your unique situation.
+                <TranslationWrapper>
+                  Advanced algorithms provide personalized recommendations for your unique situation.
+                </TranslationWrapper>
               </p>
             </div>
             <div className="text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-accent text-accent-foreground">
                 <Calculator className="h-6 w-6" />
               </div>
-              <h3 className="mt-4 font-serif text-lg font-semibold">Comprehensive Tools</h3>
+              <h3 className="mt-4 font-serif text-lg font-semibold">
+                <TranslationWrapper>Comprehensive Tools</TranslationWrapper>
+              </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Complete suite of calculators and planning tools for all your financial needs.
+                <TranslationWrapper>
+                  Complete suite of calculators and planning tools for all your financial needs.
+                </TranslationWrapper>
               </p>
             </div>
             <div className="text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-accent text-accent-foreground">
                 <Users className="h-6 w-6" />
               </div>
-              <h3 className="mt-4 font-serif text-lg font-semibold">Expert Guidance</h3>
+              <h3 className="mt-4 font-serif text-lg font-semibold">
+                <TranslationWrapper>Expert Guidance</TranslationWrapper>
+              </h3>
               <p className="mt-2 text-sm text-muted-foreground">
-                Professional financial expertise accessible to everyone, anytime.
+                <TranslationWrapper>
+                  Professional financial expertise accessible to everyone, anytime.
+                </TranslationWrapper>
               </p>
             </div>
           </div>
@@ -128,9 +158,13 @@ export default function HomePage() {
       <section id="services" className="py-20">
         <div className="container">
           <div className="mx-auto max-w-2xl text-center">
-            <h2 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">Core Services</h2>
+            <h2 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">
+              <TranslationWrapper>Core Services</TranslationWrapper>
+            </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Comprehensive financial guidance across all aspects of your financial life
+              <TranslationWrapper>
+                Comprehensive financial guidance across all aspects of your financial life
+              </TranslationWrapper>
             </p>
           </div>
 
@@ -140,21 +174,33 @@ export default function HomePage() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent text-accent-foreground">
                   <TrendingUp className="h-6 w-6" />
                 </div>
-                <CardTitle className="font-serif">Financial Advisory</CardTitle>
+                <CardTitle className="font-serif">
+                  <TranslationWrapper>Financial Advisory</TranslationWrapper>
+                </CardTitle>
                 <CardDescription>
-                  Personal budgeting, savings strategies, and comprehensive financial planning
+                  <TranslationWrapper>
+                    Personal budgeting, savings strategies, and comprehensive financial planning
+                  </TranslationWrapper>
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>• Budget optimization</li>
-                  <li>• Emergency fund planning</li>
-                  <li>• Goal-based savings</li>
-                  <li>• Retirement planning</li>
+                  <li>
+                    • <TranslationWrapper>Budget optimization</TranslationWrapper>
+                  </li>
+                  <li>
+                    • <TranslationWrapper>Emergency fund planning</TranslationWrapper>
+                  </li>
+                  <li>
+                    • <TranslationWrapper>Goal-based savings</TranslationWrapper>
+                  </li>
+                  <li>
+                    • <TranslationWrapper>Retirement planning</TranslationWrapper>
+                  </li>
                 </ul>
               </CardContent>
               <Badge className="absolute top-4 right-4" variant="secondary">
-                Demo Data
+                <TranslationWrapper>Demo Data</TranslationWrapper>
               </Badge>
             </Card>
 
@@ -163,19 +209,33 @@ export default function HomePage() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent text-accent-foreground">
                   <Calculator className="h-6 w-6" />
                 </div>
-                <CardTitle className="font-serif">Loan Advisory</CardTitle>
-                <CardDescription>Loan eligibility, EMI calculations, and debt management strategies</CardDescription>
+                <CardTitle className="font-serif">
+                  <TranslationWrapper>Loan Advisory</TranslationWrapper>
+                </CardTitle>
+                <CardDescription>
+                  <TranslationWrapper>
+                    Loan eligibility, EMI calculations, and debt management strategies
+                  </TranslationWrapper>
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>• Eligibility assessment</li>
-                  <li>• EMI calculators</li>
-                  <li>• Loan comparisons</li>
-                  <li>• Debt optimization</li>
+                  <li>
+                    • <TranslationWrapper>Eligibility assessment</TranslationWrapper>
+                  </li>
+                  <li>
+                    • <TranslationWrapper>EMI calculators</TranslationWrapper>
+                  </li>
+                  <li>
+                    • <TranslationWrapper>Loan comparisons</TranslationWrapper>
+                  </li>
+                  <li>
+                    • <TranslationWrapper>Debt optimization</TranslationWrapper>
+                  </li>
                 </ul>
               </CardContent>
               <Badge className="absolute top-4 right-4" variant="secondary">
-                Demo Data
+                <TranslationWrapper>Demo Data</TranslationWrapper>
               </Badge>
             </Card>
 
@@ -184,19 +244,33 @@ export default function HomePage() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent text-accent-foreground">
                   <TrendingUp className="h-6 w-6" />
                 </div>
-                <CardTitle className="font-serif">Investment Advisory</CardTitle>
-                <CardDescription>Stock analysis, mutual funds, and portfolio optimization guidance</CardDescription>
+                <CardTitle className="font-serif">
+                  <TranslationWrapper>Investment Advisory</TranslationWrapper>
+                </CardTitle>
+                <CardDescription>
+                  <TranslationWrapper>
+                    Stock analysis, mutual funds, and portfolio optimization guidance
+                  </TranslationWrapper>
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>• Risk profiling</li>
-                  <li>• Portfolio analysis</li>
-                  <li>• SIP planning</li>
-                  <li>• Market insights</li>
+                  <li>
+                    • <TranslationWrapper>Risk profiling</TranslationWrapper>
+                  </li>
+                  <li>
+                    • <TranslationWrapper>Portfolio analysis</TranslationWrapper>
+                  </li>
+                  <li>
+                    • <TranslationWrapper>SIP planning</TranslationWrapper>
+                  </li>
+                  <li>
+                    • <TranslationWrapper>Market insights</TranslationWrapper>
+                  </li>
                 </ul>
               </CardContent>
               <Badge className="absolute top-4 right-4" variant="secondary">
-                Demo Data
+                <TranslationWrapper>Demo Data</TranslationWrapper>
               </Badge>
             </Card>
 
@@ -205,19 +279,31 @@ export default function HomePage() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent text-accent-foreground">
                   <Shield className="h-6 w-6" />
                 </div>
-                <CardTitle className="font-serif">Insurance Advisory</CardTitle>
-                <CardDescription>Life, health, and vehicle insurance planning and comparison</CardDescription>
+                <CardTitle className="font-serif">
+                  <TranslationWrapper>Insurance Advisory</TranslationWrapper>
+                </CardTitle>
+                <CardDescription>
+                  <TranslationWrapper>Life, health, and vehicle insurance planning and comparison</TranslationWrapper>
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li>• Coverage assessment</li>
-                  <li>• Policy comparisons</li>
-                  <li>• Premium optimization</li>
-                  <li>• Claim guidance</li>
+                  <li>
+                    • <TranslationWrapper>Coverage assessment</TranslationWrapper>
+                  </li>
+                  <li>
+                    • <TranslationWrapper>Policy comparisons</TranslationWrapper>
+                  </li>
+                  <li>
+                    • <TranslationWrapper>Premium optimization</TranslationWrapper>
+                  </li>
+                  <li>
+                    • <TranslationWrapper>Claim guidance</TranslationWrapper>
+                  </li>
                 </ul>
               </CardContent>
               <Badge className="absolute top-4 right-4" variant="secondary">
-                Demo Data
+                <TranslationWrapper>Demo Data</TranslationWrapper>
               </Badge>
             </Card>
           </div>
@@ -229,10 +315,12 @@ export default function HomePage() {
         <div className="container">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="font-serif text-3xl font-bold tracking-tight sm:text-4xl">
-              Ready to Transform Your Financial Future?
+              <TranslationWrapper>Ready to Transform Your Financial Future?</TranslationWrapper>
             </h2>
             <p className="mt-4 text-lg opacity-90">
-              Join thousands of users who trust our AI-powered platform for their financial decisions.
+              <TranslationWrapper>
+                Join thousands of users who trust our AI-powered platform for their financial decisions.
+              </TranslationWrapper>
             </p>
             <div className="mt-8">
               <Button
@@ -242,7 +330,7 @@ export default function HomePage() {
                 className="bg-accent hover:bg-accent/90 text-accent-foreground"
               >
                 <Link href="/features">
-                  Let's Get Started
+                  <TranslationWrapper>Let's Get Started</TranslationWrapper>
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -263,44 +351,78 @@ export default function HomePage() {
                 <div className="flex h-6 w-6 items-center justify-center rounded bg-primary text-primary-foreground">
                   <TrendingUp className="h-3 w-3" />
                 </div>
-                <span className="font-serif font-bold">Smart Financial Advisor</span>
+                <span className="font-serif font-bold">
+                  <TranslationWrapper>Smart Financial Advisor</TranslationWrapper>
+                </span>
               </div>
               <p className="mt-4 text-sm text-muted-foreground">
-                AI-powered financial guidance for a smarter financial future.
+                <TranslationWrapper>AI-powered financial guidance for a smarter financial future.</TranslationWrapper>
               </p>
             </div>
             <div>
-              <h3 className="font-serif font-semibold">Services</h3>
+              <h3 className="font-serif font-semibold">
+                <TranslationWrapper>Services</TranslationWrapper>
+              </h3>
               <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                <li>Financial Planning</li>
-                <li>Loan Advisory</li>
-                <li>Investment Guidance</li>
-                <li>Insurance Planning</li>
+                <li>
+                  <TranslationWrapper>Financial Planning</TranslationWrapper>
+                </li>
+                <li>
+                  <TranslationWrapper>Loan Advisory</TranslationWrapper>
+                </li>
+                <li>
+                  <TranslationWrapper>Investment Guidance</TranslationWrapper>
+                </li>
+                <li>
+                  <TranslationWrapper>Insurance Planning</TranslationWrapper>
+                </li>
               </ul>
             </div>
             <div>
-              <h3 className="font-serif font-semibold">Resources</h3>
+              <h3 className="font-serif font-semibold">
+                <TranslationWrapper>Resources</TranslationWrapper>
+              </h3>
               <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                <li>Financial Calculators</li>
-                <li>Educational Content</li>
-                <li>Market Insights</li>
-                <li>Planning Tools</li>
+                <li>
+                  <TranslationWrapper>Financial Calculators</TranslationWrapper>
+                </li>
+                <li>
+                  <TranslationWrapper>Educational Content</TranslationWrapper>
+                </li>
+                <li>
+                  <TranslationWrapper>Market Insights</TranslationWrapper>
+                </li>
+                <li>
+                  <TranslationWrapper>Planning Tools</TranslationWrapper>
+                </li>
               </ul>
             </div>
             <div>
-              <h3 className="font-serif font-semibold">Legal</h3>
+              <h3 className="font-serif font-semibold">
+                <TranslationWrapper>Legal</TranslationWrapper>
+              </h3>
               <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                <li>Privacy Policy</li>
-                <li>Terms of Service</li>
-                <li>Disclaimers</li>
-                <li>Contact Us</li>
+                <li>
+                  <TranslationWrapper>Privacy Policy</TranslationWrapper>
+                </li>
+                <li>
+                  <TranslationWrapper>Terms of Service</TranslationWrapper>
+                </li>
+                <li>
+                  <TranslationWrapper>Disclaimers</TranslationWrapper>
+                </li>
+                <li>
+                  <TranslationWrapper>Contact Us</TranslationWrapper>
+                </li>
               </ul>
             </div>
           </div>
           <div className="mt-8 border-t pt-8 text-center text-sm text-muted-foreground">
             <p>
-              © 2024 Smart Financial Advisor. All rights reserved. This platform uses demo data for educational purposes
-              only.
+              <TranslationWrapper>
+                © 2025 Smart Financial Advisor. All rights reserved. This platform uses demo data for educational
+                purposes only.
+              </TranslationWrapper>
             </p>
           </div>
         </div>
