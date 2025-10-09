@@ -1,4 +1,3 @@
-import { generateText } from "ai"
 import type { NextRequest } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { getSarvamClient } from "@/lib/sarvam/client"
@@ -111,6 +110,157 @@ async function translateResponse(text: string, targetLanguage: string): Promise<
   }
 }
 
+// Helper to list models on both API versions and pick the best available
+async function listGeminiModelsAll(apiKey: string) {
+  const versions = ["v1", "v1beta"] as const
+  const results: Array<{ version: "v1" | "v1beta"; models: any[] }> = []
+
+  for (const ver of versions) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/${ver}/models?key=${apiKey}`)
+      if (!res.ok) {
+        const body = await res.text().catch(() => "")
+        console.log("[v0] ListModels failed", { version: ver, status: res.status, body })
+        continue
+      }
+      const json = (await res.json()) as { models?: any[] }
+      const models = Array.isArray(json?.models) ? json!.models! : []
+      console.log("[v0] ListModels success", { version: ver, count: models.length })
+      results.push({ version: ver, models })
+    } catch (err: any) {
+      console.log("[v0] ListModels error", { version: ver, err: String(err) })
+    }
+  }
+
+  return results
+}
+
+function normalizeModelName(name: string) {
+  // API may return "models/gemini-1.5-pro-002" — we need just "gemini-1.5-pro-002"
+  return name.includes("/") ? name.split("/").pop()! : name
+}
+
+function supportsGenerateContent(m: any) {
+  const methods = Array.isArray(m?.supportedGenerationMethods) ? m.supportedGenerationMethods : []
+  // Some responses omit supportedGenerationMethods; assume generateContent is okay then.
+  return methods.length === 0 || methods.includes("generateContent")
+}
+
+function isLLM(m: any) {
+  const n = (m?.name ?? "") as string
+  // Exclude embedding-only models etc.
+  return n.includes("gemini") && !n.includes("embedding")
+}
+
+async function callGeminiAPI(messages: any[], systemPrompt: string) {
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
+  if (!GEMINI_API_KEY) {
+    throw new Error("Google Gemini API key not found. Please add GEMINI_API_KEY or GOOGLE_API_KEY in Vars.")
+  }
+
+  const contents = [
+    { role: "user", parts: [{ text: systemPrompt }] },
+    ...messages.map((msg: any) => ({
+      role: msg.role === "assistant" ? "model" : "user",
+      parts: [{ text: msg.content }],
+    })),
+  ]
+
+  const generationConfig = {
+    temperature: 0.7,
+    maxOutputTokens: 768,
+  }
+
+  // 1) Discover models across v1 + v1beta
+  const discovered = await listGeminiModelsAll(GEMINI_API_KEY)
+
+  // Create ordered candidates from discovered models (prefer v1, then v1beta)
+  const discoveredCandidates: Array<{ version: "v1" | "v1beta"; model: string }> = []
+  for (const { version, models } of discovered.sort((a, b) => (a.version === "v1" ? -1 : 1))) {
+    for (const m of models) {
+      if (!isLLM(m) || !supportsGenerateContent(m)) continue
+      discoveredCandidates.push({ version, model: normalizeModelName(m.name as string) })
+    }
+  }
+
+  // 2) Fallback matrix when discovery is empty or insufficient
+  // These include explicit numeric variants to avoid “alias not found” errors.
+  const fallbackMatrix: Array<{ version: "v1" | "v1beta"; model: string }> = [
+    // v1 candidates
+    { version: "v1", model: "gemini-1.5-pro-002" },
+    { version: "v1", model: "gemini-1.5-flash-002" },
+    { version: "v1", model: "gemini-1.5-pro-001" },
+    { version: "v1", model: "gemini-1.5-flash-001" },
+    { version: "v1", model: "gemini-1.5-pro" },
+    { version: "v1", model: "gemini-1.5-flash" },
+
+    // v1beta candidates
+    { version: "v1beta", model: "gemini-1.5-pro-002" },
+    { version: "v1beta", model: "gemini-1.5-flash-002" },
+    { version: "v1beta", model: "gemini-1.5-pro-001" },
+    { version: "v1beta", model: "gemini-1.5-flash-001" },
+    { version: "v1beta", model: "gemini-1.0-pro" },
+    { version: "v1beta", model: "gemini-pro" },
+  ]
+
+  const tried: Array<{ version: string; model: string; status?: number; note?: string }> = []
+  let lastErr: any = null
+
+  // 3) Try discovered first, then fallbacks
+  const toTry = [...discoveredCandidates, ...fallbackMatrix]
+
+  for (const { version, model } of toTry) {
+    const url = `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent?key=${GEMINI_API_KEY}`
+    try {
+      console.log("[v0] Trying Gemini", { version, model })
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents, generationConfig }),
+      })
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => "")
+        tried.push({ version, model, status: response.status, note: body.slice(0, 200) })
+        // If model not found/unsupported, keep trying next
+        if (response.status === 404 || response.status === 400 || response.status === 403) {
+          lastErr = new Error(`[${version}] ${model} -> ${response.status}: ${body}`)
+          continue
+        }
+        lastErr = new Error(`[${version}] ${model} -> ${response.status}: ${body}`)
+        continue
+      }
+
+      const data = await response.json()
+      const text =
+        data?.candidates?.[0]?.content?.parts?.[0]?.text ??
+        data?.candidates?.[0]?.content?.parts
+          ?.map((p: any) => p?.text)
+          .filter(Boolean)
+          .join(" ")
+
+      if (typeof text === "string" && text.trim().length > 0) {
+        console.log("[v0] Gemini success", { version, model })
+        return text
+      }
+
+      tried.push({ version, model, note: "Empty response" })
+      lastErr = new Error(`[${version}] ${model} -> Empty response`)
+    } catch (err: any) {
+      tried.push({ version, model, note: `Exception: ${String(err)}` })
+      lastErr = err
+      continue
+    }
+  }
+
+  console.log("[v0] Gemini tried matrix", tried)
+  throw new Error(
+    `Gemini request failed across versions/models. Last error: ${
+      lastErr instanceof Error ? lastErr.message : String(lastErr)
+    }`,
+  )
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { messages, language = "en-IN", context = "general" } = await request.json()
@@ -131,18 +281,7 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = buildSystemPrompt(context, userProfile, language)
 
-    const result = await generateText({
-      model: "google/gemini-1.5-flash-latest",
-      system: systemPrompt,
-      messages: messages.map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      })),
-      temperature: 0.7,
-      maxTokens: 1024,
-    })
-
-    let responseText = result.text
+    let responseText = await callGeminiAPI(messages, systemPrompt)
 
     // Translate response if needed
     if (language !== "en-IN") {
@@ -189,6 +328,14 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error("Chat API error:", error)
-    return new Response("Internal server error", { status: 500 })
+    return new Response(
+      JSON.stringify({
+        error: "I apologize, but I'm having trouble responding right now. Please try again in a moment.",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      },
+    )
   }
 }

@@ -21,7 +21,7 @@ interface SarvamTTSRequest {
   loudness?: number
   speech_sample_rate?: number
   enable_preprocessing?: boolean
-  model?: "bulbul:v1"
+  model?: "bulbul:v2" | "bulbul:v3-beta"
 }
 
 interface SarvamTTSResponse {
@@ -71,23 +71,56 @@ class SarvamClient {
 
   async textToSpeech(params: SarvamTTSRequest): Promise<string[]> {
     try {
+      const maxLen = 500
+      const safeChunks: string[] = []
+      const chunkOne = (text: string) => {
+        if (text.length <= maxLen) {
+          safeChunks.push(text)
+          return
+        }
+        let start = 0
+        while (start < text.length) {
+          const slice = text.slice(start, Math.min(start + maxLen, text.length))
+          if (slice.length < maxLen) {
+            safeChunks.push(slice)
+            break
+          }
+          const punctIdx = Math.max(slice.lastIndexOf("."), slice.lastIndexOf("!"), slice.lastIndexOf("?"))
+          const cut = punctIdx > 50 ? start + punctIdx + 1 : start + maxLen
+          safeChunks.push(text.slice(start, cut))
+          start = cut
+        }
+      }
+
+      for (const str of params.inputs) {
+        chunkOne(str)
+      }
+
+      const speaker = params.speaker && params.speaker.trim().length > 0 ? params.speaker : "anushka"
+      const model: "bulbul:v2" | "bulbul:v3-beta" = params.model || "bulbul:v2"
+
+      const body: Record<string, any> = {
+        inputs: safeChunks,
+        target_language_code: params.target_language_code,
+        speaker,
+        model,
+        ...(typeof params.enable_preprocessing === "boolean"
+          ? { enable_preprocessing: params.enable_preprocessing }
+          : {}),
+      }
+
+      if (typeof params.pitch === "number") body.pitch = params.pitch
+      if (typeof params.pace === "number") body.pace = params.pace
+      if (typeof params.loudness === "number") body.loudness = params.loudness
+      if (typeof params.speech_sample_rate === "number") body.speech_sample_rate = params.speech_sample_rate
+
       const response = await fetch(`${this.baseUrl}/text-to-speech`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "API-Subscription-Key": this.apiKey,
         },
-        body: JSON.stringify({
-          inputs: params.inputs,
-          target_language_code: params.target_language_code,
-          speaker: params.speaker,
-          pitch: params.pitch || 0,
-          pace: params.pace || 1.0,
-          loudness: params.loudness || 1.0,
-          speech_sample_rate: params.speech_sample_rate || 8000,
-          enable_preprocessing: params.enable_preprocessing ?? true,
-          model: params.model || "bulbul:v1",
-        }),
+        body: JSON.stringify(body),
       })
 
       if (!response.ok) {
@@ -104,7 +137,6 @@ class SarvamClient {
   }
 }
 
-// Singleton instance
 let sarvamClient: SarvamClient | null = null
 
 export function getSarvamClient(): SarvamClient {

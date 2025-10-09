@@ -186,10 +186,11 @@ export function ChatAssistant({ context, className = "", isOpen, onOpenChange }:
 
   if (isMinimized) {
     return (
-      <div className={`fixed bottom-40 right-4 z-50 ${className}`}>
+      <div className={`fixed bottom-6 md:bottom-8 right-4 md:right-6 z-[60] ${className}`}>
         <Button
           onClick={() => setIsMinimized(false)}
           className="rounded-full w-14 h-14 shadow-lg bg-accent hover:bg-accent/90"
+          aria-label="Open AI chat"
         >
           <MessageCircle className="h-6 w-6" />
         </Button>
@@ -198,8 +199,11 @@ export function ChatAssistant({ context, className = "", isOpen, onOpenChange }:
   }
 
   return (
-    <div className={`w-full ${className}`}>
-      <Card className="w-full h-[500px] shadow-xl border-2">
+    <div
+      className={`fixed z-[60] inset-x-2 bottom-6 md:inset-auto md:right-6 md:bottom-6 md:w-[420px] ${className}`}
+      style={{ maxWidth: "min(420px, calc(100vw - 1rem))" }}
+    >
+      <Card className="w-full max-h-[80vh] flex flex-col shadow-xl border-2">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="font-serif text-lg flex items-center">
@@ -230,7 +234,7 @@ export function ChatAssistant({ context, className = "", isOpen, onOpenChange }:
             </div>
           )}
         </CardHeader>
-        <CardContent className="p-0 flex flex-col h-[420px]">
+        <CardContent className="p-0 flex-1 flex flex-col">
           <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
             <div className="space-y-4">
               {messages.map((message) => (

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from "react"
 import { getSarvamClient } from "@/lib/sarvam/client"
-import { getSarvamLanguageCode, getAvailableSpeakers } from "@/lib/sarvam/utils"
+import { getSarvamLanguageCode, getAvailableSpeakers, DEFAULT_TTS_SPEAKER } from "@/lib/sarvam/utils"
 import { useLanguage } from "@/contexts/language-context"
 
 interface TTSOptions {
@@ -33,7 +33,7 @@ export function useTextToSpeech(options: TTSOptions = {}) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const targetLanguage = options.language || currentLanguage
   const availableSpeakers = getAvailableSpeakers(targetLanguage)
-  const selectedSpeaker = options.speaker || availableSpeakers[0] || "meera"
+  const selectedSpeaker = options.speaker || availableSpeakers[0] || DEFAULT_TTS_SPEAKER
 
   const generateSpeech = useCallback(
     async (text: string) => {
